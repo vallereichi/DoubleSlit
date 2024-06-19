@@ -26,8 +26,8 @@ cudaError_t cudaCheckError()
 
 __global__ void RKstep(double *Mat, double *Vec, size_t length_x, size_t length_y, double *k_now, double *k_next, double scale_k)
 {
-    int i = blockIdx.x + blockDim.x + threadIdx.x;
-    int j = blockIdx.y + blockDim.y + threadIdx.y;
+    int i = blockIdx.x + gridDim.x + threadIdx.x;
+    int j = blockIdx.y + gridDim.y + threadIdx.y;
     
     k_next[j] = k_next[j] + Mat[j * length_x + i] * (Vec[i] + scale_k * k_now[i]);
 }
@@ -113,7 +113,7 @@ int main ()
     int blocks_y = (length_y + threads - 1) / threads;
 
     dim3 blockDim(threads, threads);
-    dim3 grifDim(blocks_x, blocks_y);
+    dim3 gridDim(blocks_x, blocks_y);
 
 
     
