@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 
+#include <cuda_runtime.h>
 
 
 
