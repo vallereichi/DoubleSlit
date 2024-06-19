@@ -1,4 +1,7 @@
 #include <iostream>
+#include <string>
+#include <fstream>
+#include <chrono>
 
 /*
 RK4step performs one step of the Runge Kutta method of 4th order
@@ -35,46 +38,62 @@ void RKstep(double* Mat, double* Vec, size_t length_x, size_t length_y, double* 
 
 int main ()
 {
-    size_t length_x = 10;
-    size_t length_y = 10;
+    std::ofstream file;
+    file.open("../timecpp.txt", std::ios::out | std::ios::app);
 
-    double* Mat = (double*)calloc(length_x * length_y, sizeof(double));
-    
-    double* Vec = (double*)calloc(length_y, sizeof(double));
-
-    double* k0 = (double*)calloc(length_y, sizeof(double));
-    double* k1 = (double*)calloc(length_y, sizeof(double));
-    double* k2 = (double*)calloc(length_y, sizeof(double));
-    double* k3 = (double*)calloc(length_y, sizeof(double));
-    double* k4 = (double*)calloc(length_y, sizeof(double));
-
-    double* result = (double*)calloc(length_y, sizeof(double));
-
-
-    for (size_t i = 0; i < length_x * length_y; i++)        {Mat[i] = 1.0;  }
-    for (size_t i = 0; i < length_y; i++)                   {Vec[i] = i + 1;}
-
-    
-    
-    RKstep(Mat, Vec, length_x, length_y, k0, k1, 1.0);
-    RKstep(Mat, Vec, length_x, length_y, k1, k2, 0.5);
-    RKstep(Mat, Vec, length_x, length_y, k2, k3, 0.5);
-    RKstep(Mat, Vec, length_x, length_y, k3, k4, 1.0);
-
-    //averaging the different steps with appropriate weights
-    for (int i = 0; i < length_y; i++) 
+    for (int t = 0; t < 100; t++)
     {
-        result[i] = Vec[i] + (1.0 / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
-        std::cout << result[i] << std::endl;
-    }
+        size_t length_x = 100*t;
+        size_t length_y = 100*t;
 
-    free(Mat);
-    free(Vec);
-    free(k0);
-    free(k1);
-    free(k2);
-    free(k3);
-    free(k4);
-    free(result);
-}
+        double* Mat = (double*)calloc(length_x * length_y, sizeof(double));
+
+        double* Vec = (double*)calloc(length_y, sizeof(double));
+
+        double* k0 = (double*)calloc(length_y, sizeof(double));
+        double* k1 = (double*)calloc(length_y, sizeof(double));
+        double* k2 = (double*)calloc(length_y, sizeof(double));
+        double* k3 = (double*)calloc(length_y, sizeof(double));
+        double* k4 = (double*)calloc(length_y, sizeof(double));
+
+        double* result = (double*)calloc(length_y, sizeof(double));
+
+
+        for (size_t i = 0; i < length_x * length_y; i++)        {Mat[i] = 1.0;  }
+        for (size_t i = 0; i < length_y; i++)                   {Vec[i] = i + 1;}
+
+        auto t_start = std::chrono::high_resolution_clock::now();
+
+        RKstep(Mat, Vec, length_x, length_y, k0, k1, 1.0);
+        RKstep(Mat, Vec, length_x, length_y, k1, k2, 0.5);
+        RKstep(Mat, Vec, length_x, length_y, k2, k3, 0.5);
+        RKstep(Mat, Vec, length_x, length_y, k3, k4, 1.0);
+
+        auto t_end = std::chrono::high_resolution_clock::now();
+
+        //averaging the different steps with appropriate weights
+        for (int i = 0; i < length_y; i++) 
+        {
+            result[i] = Vec[i] + (1.0 / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
+            std::cout << result[i] << std::endl;
+        }
+
+
+        
+        file << std::to_string(std::chrono::duration<double, std::milli>(t_end-t_start).count()) << ", ";
+        std::cout << std::to_string(std::chrono::duration<double, std::milli>(t_end-t_start).count()) << std::endl;
+        
+
+
+        free(Mat);
+        free(Vec);
+        free(k0);
+        free(k1);
+        free(k2);
+        free(k3);
+        free(k4);
+        free(result);
+    }
+    file.close();
+}   
 
