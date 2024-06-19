@@ -1,9 +1,16 @@
 #include <iostream>
-#include <cuda_runtime.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
+
+
+
 
 #define threadsPerBlock 32
 
-__global__ void RKstep(double* Mat, double* Vec, size_t length_x, size_t length_y, double* k_now, double* k_next, double scale_k)
+__global__ void RKstep(double *Mat, double *Vec, size_t length_x, size_t length_y, double *k_now, double *k_next, double scale_k)
 {
     int i = blockIdx.x + blockDim.x + threadIdx.x;
     int j = blockIdx.y + blockDim.y + threadIdx.y;
@@ -17,13 +24,13 @@ int main ()
     size_t length_x = 10;
     size_t length_y = 10;
 
-    double* Mat = (double*)calloc(length_x * length_y, sizeof(double));
-    double* Mat_d = NULL;
-    cudaMalloc(&Mat_d, length_x * length_y, sizeof(double));
+    double *Mat = (double*)calloc(length_x * length_y, sizeof(double));
+    double *Mat_d = NULL;
+    cudaMalloc(&Mat_d, length_x * length_y * sizeof(double));
 
-    double* Vec = (double*)calloc(length_y, sizeof(double));
-    double* Vec_d = NULL;
-    cudaMalloc(&Vec_d, length_y, sizeof(double));
+    double *Vec = (double*)calloc(length_y, sizeof(double));
+    double *Vec_d = NULL;
+    cudaMalloc(&Vec_d, length_y * sizeof(double));
 
     for (size_t i = 0; i < length_x * length_y; i++)        {Mat[i] = 1.0;  }
     for (size_t i = 0; i < length_y; i++)                   {Vec[i] = i + 1;}
@@ -31,27 +38,27 @@ int main ()
     cudaMemcpy(Mat_d, Mat, length_x * length_y * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(Vec_d, Vec, length_x * length_y * sizeof(double), cudaMemcpyHostToDevice);
 
-    double* k0 = (double*)calloc(length_y, sizeof(double));
-    double* k1 = (double*)calloc(length_y, sizeof(double));
-    double* k2 = (double*)calloc(length_y, sizeof(double));
-    double* k3 = (double*)calloc(length_y, sizeof(double));
-    double* k4 = (double*)calloc(length_y, sizeof(double));
+    double *k0 = (double*)calloc(length_y, sizeof(double));
+    double *k1 = (double*)calloc(length_y, sizeof(double));
+    double *k2 = (double*)calloc(length_y, sizeof(double));
+    double *k3 = (double*)calloc(length_y, sizeof(double));
+    double *k4 = (double*)calloc(length_y, sizeof(double));
 
-    double *k0_d = NULL, *k1_d = NULL, k2_d = NULL, k3_d = NULL, k4_d = NULL;
+    double *k0_d = NULL, *k1_d = NULL, *k2_d = NULL, *k3_d = NULL, *k4_d = NULL;
 
-    cudaMalloc(&k0_d, length_y, sizeof(double));
-    cudaMalloc(&k1_d, length_y, sizeof(double));
-    cudaMalloc(&k2_d, length_y, sizeof(double));
-    cudaMalloc(&k3_d, length_y, sizeof(double));
-    cudaMalloc(&k4_d, length_y, sizeof(double));
+    cudaMalloc(&k0_d, length_y * sizeof(double));
+    cudaMalloc(&k1_d, length_y * sizeof(double));
+    cudaMalloc(&k2_d, length_y * sizeof(double));
+    cudaMalloc(&k3_d, length_y * sizeof(double));
+    cudaMalloc(&k4_d, length_y * sizeof(double));
 
-    cudaMemcpy(k0_d, k0, length_y * sizeof(double), cudaMemcpyHostToDevcice);
-    cudaMemcpy(k1_d, k1, length_y * sizeof(double), cudaMemcpyHostToDevcice);
-    cudaMemcpy(k2_d, k2, length_y * sizeof(double), cudaMemcpyHostToDevcice);
-    cudaMemcpy(k3_d, k3, length_y * sizeof(double), cudaMemcpyHostToDevcice);
-    cudaMemcpy(k4_d, k4, length_y * sizeof(double), cudaMemcpyHostToDevcice);
+    cudaMemcpy(k0_d, k0, length_y * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(k1_d, k1, length_y * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(k2_d, k2, length_y * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(k3_d, k3, length_y * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(k4_d, k4, length_y * sizeof(double), cudaMemcpyHostToDevice);
 
-    double* result = (double*)calloc(length_y, sizeof(double));
+    double *result = (double*)calloc(length_y, sizeof(double));
 
     int threads = threadsPerBlock;
     int blocks_x = (length_x + threads - 1) / threads;
@@ -62,25 +69,6 @@ int main ()
 
 
     
-    /*
-    //1st step of Runge Kutta method -> Matrix Vector Multiplication
-    for (int j = 0; j < length_y; j++)
-    {
-        for (int i = 0; i < length_x; i++)
-        {
-            k1[j] = k1[j] + Mat[j * length_x + i] * Vec[i];
-        }
-    }
-
-    //2nd step of Runge Kutta method -> 1. Vector Assition 2. Matrix Vector Multiplication
-    for (int j = 0; j < length_y; j++)
-    {
-        for (int i = 0; i < length_x; i++)
-        {
-            k2[j] = k2[j] + Mat[j * length_x + i] * (Vec[i] + 0.5 * k1[i]);
-        }
-    }
-    */
     
     RKstep<<<gridDim, blockDim>>>(Mat, Vec, length_x, length_y, k0, k1, 1.0);
     cudaDeviceSynchronize();
