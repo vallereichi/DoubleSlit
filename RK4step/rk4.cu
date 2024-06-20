@@ -43,6 +43,8 @@ int main ()
     cudaMalloc(&Mat_d, length_x * length_y * sizeof(double));
     cudaError_t code_mat = cudaCheckError();
 
+    
+
     double *Vec = (double*)calloc(length_y, sizeof(double));
     double *Vec_d = NULL;
     cudaMalloc(&Vec_d, length_y * sizeof(double));
