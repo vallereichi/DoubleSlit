@@ -72,12 +72,13 @@ int main ()
         auto t_end = std::chrono::high_resolution_clock::now();
 
         //averaging the different steps with appropriate weights
+        /*
         for (int i = 0; i < length_y; i++) 
         {
             result[i] = Vec[i] + (1.0 / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
             std::cout << result[i] << std::endl;
         }
-
+        */
 
         
         file << std::to_string(std::chrono::duration<double, std::milli>(t_end-t_start).count()) << ", ";
