@@ -5,7 +5,7 @@
 
 typedef std::complex<double> complex;
 
-void writeToFile(double* array, int arraySize, std::string filepath, int mode)
+void writeToFile(double *array, int arraySize, std::string filepath, int mode)
 {
     std::ofstream file;
    
@@ -25,6 +25,25 @@ void writeToFile(double* array, int arraySize, std::string filepath, int mode)
                 file << array[i] << ", ";
             }
         }    
+}
+
+
+void writeToCSV (complex *xarray, complex *yarray, double *potential, std::string filepath)
+{
+    //only works for arrays of same length -> add some logic for handling different lenghts
+
+    /*
+    what i wanna build here is a function that puts data of an array in a specified column
+    */
+    int arraySize = sizeof(xarray) / sizeof(double);
+
+    std::ofstream file;
+    file.open(filepath);
+
+    for (int i = 0; i < arraySize; i++)
+    {
+        file << abs(xarray[i]) << "," << abs(yarray[i]) << "," << potential[i] << "\n";
+    }
 }
 
 
@@ -103,7 +122,7 @@ int main ()
     //set the potential
     //double* V = setPotential(Nx, Ny, V0, i0, i1, j0, j1, j2, j3);
 
-    float *V = (float*)malloc(Nx * Ny * sizeof(float));
+    double *V = (double*)malloc(Nx * Ny * sizeof(double));
     for (int j = 0; j < Ny; j++)
     {
         for (int i = 0; i< Nx; i++)
@@ -112,6 +131,7 @@ int main ()
             else {V[j * Nx + i] = 0;}
         }
     }
+    writeToCSV(xarray, yarray, V, "../output/potential.csv");
 
     /*
     for (int j = 0; j < Ny; j++)
@@ -127,6 +147,24 @@ int main ()
     //create the Hamiltonian
     //complex* H = Hamiltonian(V, Nx, Ny, dx, r, dt);
     //delete[] V;
+
+    complex *H = (complex*)malloc(Nx * Nx * Ny * Ny * sizeof(complex));
+    for (int k = 0; k < Nx * Ny; k++)
+    {
+        int j = 1 + floor(k/Nx);
+        int i = 1 + k % Nx;
+
+        H[k * Nx * Ny + k] = 1.0 + 4.0 * r * I * dt / 2.0 * V[j * Nx + i];
+
+        if (k + 1 <= Nx * Ny) {H[k * Nx * Ny + k + 1] = -r;}
+        if (k - 1 >= Nx * Ny) {H[k * Nx * Ny + k - 1] = -r;}
+        if (j * Nx + i - 1 <= Nx * Ny) {H[k * Nx * Ny + (j * Nx + i - 1)] = -r;}
+        if ((j - 2) * Nx + i - 1 >= 0) {H[k * Nx * Ny + ((j - 2) * Nx + i - 1)] = -r;}
+    }
+
+
+
+
 
     /*
     for (int j = 0; j < Ny*Nx; j++)
