@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <complex>
 
@@ -50,7 +51,7 @@ NOTE: The Dimension of the Matrix in the actual implementation will be of size (
 the number of grid points on the respective axis
 
 */
-void RKstep(complex* Mat, complex* Vec, size_t length_x, size_t length_y, complex* k_now, complex* k_next, double scale_k)
+void RKstep(complex* Mat, double* Vec, size_t length_x, size_t length_y, complex* k_now, complex* k_next, double scale_k)
 {
     for (int j = 0; j < length_y; j++)
     {
@@ -74,7 +75,7 @@ int main ()
     double dt = pow(dx, 2) / 4;                     //temporal step size
     int Nx = floor(L/dx) + 1;                       //Number of points on the x axis
     int Ny = floor(L/dx) + 1;                       //Number of points on the y axis
-    int Nt = 500;                                    //Number of time steps
+    int Nt = 5;                                    //Number of time steps
     complex r = - dt / (2.0 * I * pow(dx, 2));      //Constant to simplify expressions
 
     //initial position of the center of the gaussian wave packet
@@ -122,6 +123,17 @@ int main ()
         }
     }
     double* probDensities = getProbDensities(psi0, Nx*Ny);
+
+    //write data to output file
+    std::ofstream file;
+    file.open("../output/output.csv");
+    file.clear();
+    writeToCSV(xarray, Nx, "X-Array", "../output/output.csv");
+    writeToCSV(yarray, Ny, "Y-Array", "../output/output.csv");
+    writeToCSV(probDensities, Nx * Ny, "Psi-0", "../output/output.csv");
+    delete[] probDensities;
+    free(xarray);
+    free(yarray);
     
 
     //set the potential
@@ -134,26 +146,6 @@ int main ()
             else {V[j * Nx + i] = 0;}
         }
     }
-
-
-    //write data to output file
-    std::ofstream file;
-    file.open("../output/output.csv");
-    file.clear();
-    writeToCSV(xarray, Nx, "X-Array", "../output/output.csv");
-    writeToCSV(yarray, Ny, "Y-Array", "../output/output.csv");
-    writeToCSV(probDensities, Nx * Ny, "Psi 0", "../output/output.csv");
-
-    /*
-    for (int j = 0; j < Ny; j++)
-    {
-        for (int i = 0; i < Nx; i++)
-        {
-            if (i == Nx - 1)        {std::cout << V[j * Nx + i] << "\n";}
-            else                    {std::cout << V[j * Nx + i] << " "; }
-        }
-    }
-    */
 
 
     //create the Hamiltonian
@@ -172,27 +164,45 @@ int main ()
     }
 
 
-
-
-
-    /*
-    for (int j = 0; j < Ny*Nx; j++)
+    //run Runge Kutta for all time steps
+    complex *psiNow = (complex*)malloc(Nx * Ny *sizeof(complex));
+    std::copy(psi0, psi0 + Nx * Ny, psiNow);
+    free(psi0);
+    for (int t = 0; t < Nt; t++)
     {
-        for (int i = 0; i < Nx*Ny; i++)
+        std::ostringstream timeStep;
+        timeStep << "Psi-" << t + 1;
+
+        complex *k0 = (complex*)malloc(Nx * Ny * sizeof(complex));
+        complex *k1 = (complex*)malloc(Nx * Ny * sizeof(complex));
+        complex *k2 = (complex*)malloc(Nx * Ny * sizeof(complex));
+        complex *k3 = (complex*)malloc(Nx * Ny * sizeof(complex));
+        complex *k4 = (complex*)malloc(Nx * Ny * sizeof(complex));
+        
+
+        RKstep(H, V, Nx, Ny, k0, k1, 1.0);
+        RKstep(H, V, Nx, Ny, k1, k2, 1.0);
+        RKstep(H, V, Nx, Ny, k2, k3, 1.0);
+        RKstep(H, V, Nx, Ny, k3, k4, 1.0);
+        
+        for (int i = 0; i < Ny; i++) 
         {
-            if (i == Nx*Ny - 1)        {std::cout << H[j * Nx*Ny + i] << "\n";}
-            else                       {std::cout << H[j * Nx*Ny + i] << " "; }
+            psiNow[i] = psiNow[i] + (1.0 / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
         }
+
+        double *pd = getProbDensities(psiNow, Nx * Ny);
+        writeToCSV(pd, Nx * Ny, timeStep.str(), "../output/output.csv");
+        delete[] pd;
+
+        free(k0);
+        free(k1);
+        free(k2);
+        free(k3);
+        free(k4);
     }
-    */
 
-    //run runge kutta for all time steps
-    //std::vector<complex*> psi_t = RungeKutta(H, psi0, Nx, Ny, Nt, dt);
-    //delete[] H;
-    //delete[] psi0;
-
-
-
-
+    free(psiNow);
+    free(V);
+    free(H);
 
 }
