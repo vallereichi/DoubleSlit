@@ -5,44 +5,16 @@
 
 typedef std::complex<double> complex;
 
-void writeToFile(double *array, int arraySize, std::string filepath, int mode)
+
+void writeToCSV (double *array, int arraySize, std::string name, std::string filepath)
 {
     std::ofstream file;
-   
-    if (mode == 0)     
-        {
-            file.open(filepath);
-            for (int i = 0; i < arraySize; i++) 
-            {
-                file << array[i] << ", ";
-            }
-        }
-    else if (mode == 1)
-        {
-            file.open(filepath, std::ios::out | std::ios::app);
-            for (int i = 0; i < arraySize; i++) 
-            {
-                file << array[i] << ", ";
-            }
-        }    
-}
-
-
-void writeToCSV (complex *xarray, complex *yarray, double *potential, std::string filepath)
-{
-    //only works for arrays of same length -> add some logic for handling different lenghts
-
-    /*
-    what i wanna build here is a function that puts data of an array in a specified column
-    */
-    int arraySize = sizeof(xarray) / sizeof(double);
-
-    std::ofstream file;
-    file.open(filepath);
+    file.open(filepath, std::ios::out | std::ios::app);
+    file << "\n" << name << ",";
 
     for (int i = 0; i < arraySize; i++)
     {
-        file << abs(xarray[i]) << "," << abs(yarray[i]) << "," << potential[i] << "\n";
+        file << abs(array[i]) << ",";
     }
 }
 
@@ -55,6 +27,41 @@ double* getProbDensities (complex* array, int arraySize)
 
     return pd;
 }
+
+
+/*
+RK4step performs one step of the Runge Kutta method of 4th order
+The steps involved are:
+    -> k1 = H * Psi_t
+    -> k2 = H * (Psi_t + 0.5 * k1)
+    -> k3 = H * (Psi_t + 0.5 * k2)
+    -> k4 = H * (Psi_t + k3)
+
+parameters:
+    -Mat        -> Matrix representing the Hamiltonian
+    -Vec        -> Vector holding the current wave packet
+    -length_x   -> x Dimension of the matrix
+    -length_y   -> y Dimension of the matrix
+    -k_now      -> k vector used to calculate the next k vector
+    -k_next     -> k vector that needs to be calculated
+    -scale_k    -> weight of the k vector (e.g. in step two and three scale_k = 0.5)
+
+NOTE: The Dimension of the Matrix in the actual implementation will be of size (Nx*Ny)² where Nx and Ny represent 
+the number of grid points on the respective axis
+
+*/
+void RKstep(complex* Mat, complex* Vec, size_t length_x, size_t length_y, complex* k_now, complex* k_next, double scale_k)
+{
+    for (int j = 0; j < length_y; j++)
+    {
+        for (int i = 0; i < length_x; i++)
+        {
+            k_next[j] = k_next[j] + Mat[j * length_x + i] * (Vec[i] + scale_k * k_now[i]);
+        }
+    }
+}
+
+
 
 int main ()
 {
@@ -96,8 +103,8 @@ int main ()
     int j3 = int(1 / (2 * dx) * (L - s) - a / dx);
 
     //create initial wave packet
-    complex *xarray = (complex*)malloc(Nx * sizeof(complex));
-    complex *yarray = (complex*)malloc(Ny * sizeof(complex));
+    double *xarray = (double*)malloc(Nx * sizeof(double));
+    double *yarray = (double*)malloc(Ny * sizeof(double));
     for (int i = 0; i < Nx; i++) {xarray[i] = i * dx;}
     for (int j = 0; j < Nx; j++) {yarray[j] = j * dx;}
 
@@ -114,14 +121,10 @@ int main ()
             }
         }
     }
-    
     double* probDensities = getProbDensities(psi0, Nx*Ny);
-    writeToFile(probDensities, Nx*Ny, "../output/psi0.txt", 0);
-    delete[] probDensities;
+    
 
     //set the potential
-    //double* V = setPotential(Nx, Ny, V0, i0, i1, j0, j1, j2, j3);
-
     double *V = (double*)malloc(Nx * Ny * sizeof(double));
     for (int j = 0; j < Ny; j++)
     {
@@ -131,7 +134,15 @@ int main ()
             else {V[j * Nx + i] = 0;}
         }
     }
-    writeToCSV(xarray, yarray, V, "../output/potential.csv");
+
+
+    //write data to output file
+    std::ofstream file;
+    file.open("../output/output.csv");
+    file.clear();
+    writeToCSV(xarray, Nx, "X-Array", "../output/output.csv");
+    writeToCSV(yarray, Ny, "Y-Array", "../output/output.csv");
+    writeToCSV(probDensities, Nx * Ny, "Psi 0", "../output/output.csv");
 
     /*
     for (int j = 0; j < Ny; j++)
@@ -144,10 +155,8 @@ int main ()
     }
     */
 
-    //create the Hamiltonian
-    //complex* H = Hamiltonian(V, Nx, Ny, dx, r, dt);
-    //delete[] V;
 
+    //create the Hamiltonian
     complex *H = (complex*)malloc(Nx * Nx * Ny * Ny * sizeof(complex));
     for (int k = 0; k < Nx * Ny; k++)
     {
