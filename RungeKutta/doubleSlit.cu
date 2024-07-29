@@ -86,11 +86,11 @@ __global__ void RKstep(complex *Mat, complex *Vec, size_t length_x, size_t lengt
     int j = blockIdx.x * gridDim.x + threadIdx.x;
     double sum = 0;
     
-    if (j < length_y)
+    if (j < length_y*length_x)
     {
-        for (int i = 0; i < length_y; i++)
+        for (int i = 0; i < length_y*length_x; i++)
         {
-            sum = sum + Mat[j * length_x + i] * (Vec[i] + scale_k * k_now[i]);
+            sum = sum + Mat[j * length_x*length_y + i] * (Vec[i] + scale_k * k_now[i]);
         }
         k_next[j] = sum;
         sum = 0;
@@ -105,13 +105,13 @@ int main()
 
     //Parameters
     float L = 10.0;                                    //well of width L
-    double dx = 0.1;                                  //spatial step size
-    double dt = pow(dx, 2) / 4;                      //temporal step size
-    int Nx = floor(L/dx) + 1;                        //Number of points on the x axis
-    int Ny = floor(L/dx) + 1;                        //Number of points on the y axis
-    int N = Nx * Ny;
-    int Nt = 100;                                    //Number of time steps
-    complex r = I / (pow(dx, 2.0));                  //Constant to simplify expressions
+    double dx = 0.1;                                   //spatial step size
+    double dt = pow(dx, 2) / 4;                        //temporal step size
+    int Nx = floor(L/dx) + 1;                          //Number of points on the x axis
+    int Ny = floor(L/dx) + 1;                          //Number of points on the y axis
+    int N = Nx * Ny;   
+    int Nt = 100;                                      //Number of time steps
+    complex r = I / (pow(dx, 2.0));                    //Constant to simplify expressions
 
     //initial position of the center of the gaussian wave packet
     double x0 = L/5;
@@ -122,10 +122,10 @@ int main()
     double sigma = 0.75;
 
     //parameters of the double slit
-    double w = 0.2;                                 //width of the double slit
-    double s = 0.8;                                 //seperation between the slits
-    double a = 0.4;                                  //aperture of the slits
-    double V0 = 200.0;                             //constant value of the potential
+    double w = 0.2;                                   //width of the double slit
+    double s = 0.8;                                   //seperation between the slits
+    double a = 0.4;                                   //aperture of the slits
+    double V0 = 200.0;                                //constant value of the potential
 
 
     //indices that parameterize the double slit
@@ -232,7 +232,7 @@ int main()
     free(psi0);
     complex *d_psiT = NULL;
     cudaMalloc(&d_psiT, N * sizeof(complex));
-    cudaMemcpy(d_psiT, psiT, N * sizeof(complex, cudaMemcpyHostToDevice));
+    cudaMemcpy(d_psiT, psiT, N * sizeof(complex), cudaMemcpyHostToDevice);
     cudaCheckError();
 
     for (int t = 0; t < Nt; t++)
@@ -266,7 +266,7 @@ int main()
         int threads = threadsPerBlock;
         int blocks = ceil((Ny + threads - 1) / threads);
 
-        RKstep<<<blocks, threads>>>(d_H, d_psiT, Nx, Ny, d_k0, d_k1, 1.0);
+        RKstep<<<blocks, threads>>>(d_H, d_psiT, Nx, Ny, d_k0, d_k1, 0.0);
         cudaDeviceSynchronize();
         RKstep<<<blocks, threads>>>(d_H, d_psiT, Nx, Ny, d_k1, d_k2, 0.5 * dt);
         cudaDeviceSynchronize();
