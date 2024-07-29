@@ -3,14 +3,16 @@ import math
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.animation as animation
+from tqdm import tqdm
 
 colors = [(1,1,1,c) for c in np.linspace(0,1,100)]
 cmap_pot = mcolors.LinearSegmentedColormap.from_list("cmap_pot", colors, N = 5)
 
 def RKstep(Hamiltonian, PsiT, length_x, length_y, k_now, k_next, scale_k):
-    for j in range(length_y):
-        for i in range(length_x):
-            k_next[j] = k_next[j] + Hamiltonian[j * length_x + i] * (PsiT[i] + scale_k * k_now[i])
+    for j in range(length_y*length_x):
+        for i in range(length_x*length_y):
+            k_next[j] = k_next[j] + Hamiltonian[j * length_x*length_y + i] * (PsiT[i] + scale_k * k_now[i])
+            
 
 def setEdgesToZero(Psi, length_x, length_y):
     for j in range(length_y):
@@ -30,7 +32,7 @@ dt = dx**2 / 4
 Nx = int(L/dx) + 1
 Ny = int(L/dx) + 1
 N = Nx * Ny
-Nt = 100
+Nt = 500
 r = complex(0, 1/(dx**2))
 
 x0 = L/5
@@ -74,6 +76,8 @@ print("wave packet initialized...")
 x, y = np.meshgrid(xarray, yarray)
 print("Meshgrid shape: ", x.shape)
 
+
+"""
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.plot_surface(x, y, psi0.reshape(x.shape))
@@ -81,6 +85,7 @@ ax.set_xlabel("X")
 ax.set_ylabel("Y")
 ax.set_zlabel("Z")
 plt.show()
+"""
 
 
 #ptential
@@ -99,23 +104,26 @@ for k in range(N-1):
     i = k % Nx
 
     #main diagonal
-    H[k * N + k] = -4 * r - complex(0, V[j * Nx + i])
+    H[k * N + k] = 4 * r - complex(0, V[j * Nx + i])
     #upper main diagonal
-    if k+1 <= N: H[k * N + k + 1] = r
+    if k+1 <= N: H[k * N + k + 1] = -r
     #lower main diagonal
-    if k-1 >= 0: H[k * N + k - 1] = r
+    if k-1 >= 0: H[k * N + k - 1] = -r
     #upper lone diagonal
-    if k+Nx+1 <= N: H[k * N + k + Nx + 1] = r
+    if k+Nx <= N: H[k * N + k + Nx] = -r
     #lower lone diagonal
-    if k-Nx-1 >= 0: H[k * N + k - Nx - 1]  =r
+    if k-Nx >= 0: H[k * N + k - Nx]  = -r
 print("Hamiltonian set...")
+
+
 
 #run RungeKutta
 psiT = psi0
 psis = []
 psi0 = getProbDens(psi0)
 psis.append(psi0)
-for t in range(Nt):
+for t in tqdm(range(Nt)):
+    """
     k0 = np.zeros(N, dtype=complex)
     k1 = np.zeros(N, dtype=complex)
     k2 = np.zeros(N, dtype=complex)
@@ -126,6 +134,16 @@ for t in range(Nt):
     RKstep(H, psiT, Nx, Ny, k1, k2, 0.5*dt)
     RKstep(H, psiT, Nx, Ny, k2, k3, 0.5*dt)
     RKstep(H, psiT, Nx, Ny, k3, k4, dt)
+    """
+
+    k1 = np.dot(H.reshape(N, N), psiT)
+    k2 = np.dot(H.reshape(N, N), (psiT + 0.5 * dt * k1))
+    k3 = np.dot(H.reshape(N, N), (psiT + 0.5 * dt * k2))
+    k4 = np.dot(H.reshape(N, N), (psiT + 1.0 * dt * k3))
+
+
+    for i in range(N):
+        psiT[i] = psiT[i] + (dt / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i])
 
     setEdgesToZero(psiT, Nx, Ny)
     newPsi = getProbDens(psiT)
@@ -146,5 +164,5 @@ anim=animation.FuncAnimation(fig, animate, interval=1, frames=np.arange(0, len(p
 writer = animation.PillowWriter(fps=60)
 anim.save("doubleSlit.gif", writer=writer)
 
-plt.show()
+#plt.show()
 

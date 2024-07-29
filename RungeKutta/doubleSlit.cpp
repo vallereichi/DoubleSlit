@@ -68,11 +68,11 @@ the number of grid points on the respective axis
 void RKstep(complex* Hamiltonian, complex* PsiT, size_t length_x, size_t length_y, complex* k_now, complex* k_next, double scale_k)
 {
     complex sum;
-    for (int j = 0; j < length_y; j++)
+    for (int j = 0; j < length_y*length_x; j++)
     {
-        for (int i = 0; i < length_x; i++)
+        for (int i = 0; i < length_x*length_y; i++)
         {
-            sum = sum + Hamiltonian[j * length_x + i] * (PsiT[i] + scale_k * k_now[i]);
+            sum = sum + Hamiltonian[j * length_x*length_y + i] * (PsiT[i] + scale_k * k_now[i]);
         }
         k_next[j] = sum;
         sum = 0.0;
@@ -88,13 +88,13 @@ int main ()
 
     //Parameters
     float L = 10.0;                                    //well of width L
-    double dx = 0.1;                                  //spatial step size
-    double dt = pow(dx, 2) / 4;                      //temporal step size
-    int Nx = floor(L/dx) + 1;                        //Number of points on the x axis
-    int Ny = floor(L/dx) + 1;                        //Number of points on the y axis
+    double dx = 0.1;                                   //spatial step size
+    double dt = pow(dx, 2) / 4;                        //temporal step size
+    int Nx = floor(L/dx) + 1;                          //Number of points on the x axis
+    int Ny = floor(L/dx) + 1;                          //Number of points on the y axis
     int N = Nx * Ny;
-    int Nt = 100;                                    //Number of time steps
-    complex r = I / (pow(dx, 2.0));                  //Constant to simplify expressions
+    int Nt = 100;                                      //Number of time steps
+    complex r = I / (pow(dx, 2.0));                    //Constant to simplify expressions
 
     //initial position of the center of the gaussian wave packet
     double x0 = L/5;
@@ -105,10 +105,10 @@ int main ()
     double sigma = 0.75;
 
     //parameters of the double slit
-    double w = 0.2;                                 //width of the double slit
-    double s = 0.8;                                 //seperation between the slits
-    double a = 0.4;                                  //aperture of the slits
-    double V0 = 200.0;                             //constant value of the potential
+    double w = 0.2;                                   //width of the double slit
+    double s = 0.8;                                   //seperation between the slits
+    double a = 0.4;                                   //aperture of the slits
+    double V0 = 200.0;                                //constant value of the potential
 
 
     //indices that parameterize the double slit
@@ -177,16 +177,16 @@ int main ()
         int i = k % Nx;
 
         //main diagonal
-        H[k * N + k] = -4.0 * r - I * V[j * Nx + i];
+        H[k * N + k] = 4.0 * r - I * V[j * Nx + i];
 
         //upper main diagonal
-        if (k + 1 <= N) {H[k * N + k + 1] = r;}
+        if (k + 1 <= N) {H[k * N + k + 1] = -r;}
         //lower main diagonal
-        if (k - 1 >= 0) {H[k * N + k - 1] = r;}
+        if (k - 1 >= 0) {H[k * N + k - 1] = -r;}
         //upper lone diagonal
-        if (k + Nx + 1 <= N) {H[k * N + k + Nx + 1] = r;}
+        if (k + Nx <= N) {H[k * N + k + Nx] = -r;}
         //lower lone diagonal
-        if (k - Nx - 1 >= 0) {H[k * N + k - Nx - 1] = r;}
+        if (k - Nx >= 0) {H[k * N + k - Nx] = -r;}
     }
     std::cout << "Hamiltonian set..." << std::endl;
 
