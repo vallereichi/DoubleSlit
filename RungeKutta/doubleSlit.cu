@@ -84,16 +84,14 @@ the number of grid points on the respective axis
 __global__ void RKstep(complex *Mat, complex *Vec, size_t length_x, size_t length_y, complex *k_now, complex *k_next, double scale_k)
 {
     int j = blockIdx.x * gridDim.x + threadIdx.x;
-    complex sum = 0.0;
     
     if (j < length_y*length_x)
     {
         for (int i = 0; i < length_y*length_x; i++)
         {
-            sum = sum + Mat[j * length_x*length_y + i] * (Vec[i] + scale_k * k_now[i]);
+            k_next[j] = k_next[j] + Mat[j * length_x*length_y + i] * (Vec[i] + scale_k * k_now[i]);
         }
-        k_next[j] = sum;
-        sum = 0;
+        
     }
 }
 
